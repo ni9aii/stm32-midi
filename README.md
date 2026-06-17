@@ -43,6 +43,24 @@ cmake --build build-stm32 --target stm32-midi
 
 Прошивка отправляет USB-MIDI `Note On`/`Note Off` для 25 клавиш. Канал MIDI — 1, velocity при нажатии — 100, при отпускании — 0. Ноты идут подряд от MIDI note 36.
 
+## Проверка без железа
+
+Текущий повторяемый gate в этой среде:
+
+```sh
+cd firmware
+cmake -S . -B build-test
+cmake --build build-test --target midi_packets_test
+ctest --test-dir build-test --output-on-failure
+clang -fsyntax-only -Wall -Wextra \
+  -Iinclude \
+  -I../libopencm3/include \
+  -DSTM32F1 -DSTM32F103C8 \
+  src/main.c src/keyboard.c src/midi_packet.c src/usb_midi.c
+```
+
+Host-тест проверяет USB-MIDI packet builder и clamp MIDI data bytes в 0–127. `clang -fsyntax-only` проверяет firmware sources against libopencm3 headers without linking ARM firmware.
+
 ## Прошивка на плату
 
 Если установлен `st-flash`:

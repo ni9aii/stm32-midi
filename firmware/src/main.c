@@ -2,11 +2,11 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/rcc.h>
 
+#include "hardware_config.h"
 #include "keyboard.h"
 #include "usb_midi.h"
 
-#define SYSTEM_CORE_CLOCK_HZ 72000000u
-#define SYSTICK_RELOAD (SYSTEM_CORE_CLOCK_HZ / 1000u)
+#define SYSTICK_RELOAD (STM32_MIDI_SYSTEM_CORE_CLOCK_HZ / 1000u)
 #define MIDI_VELOCITY 100u
 
 static volatile uint32_t system_millis;
@@ -22,15 +22,17 @@ static void gpio_setup(void) {
   rcc_periph_clock_enable(RCC_GPIOB);
   rcc_periph_clock_enable(RCC_USB);
 
-  gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO11 | GPIO12);
+  gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,
+                STM32_MIDI_USB_D_MINUS_PIN | STM32_MIDI_USB_D_PLUS_PIN);
 
   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL,
-                GPIO0 | GPIO1 | GPIO11 | GPIO12);
+                STM32_MIDI_ROW_SELECT_PIN_MASK | STM32_MIDI_MUX_SELECT_PB_PIN);
 
   gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL,
-                GPIO1 | GPIO2);
+                STM32_MIDI_MUX_SELECT_PA_PIN_MASK);
 
-  gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO13);
+  gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,
+                STM32_MIDI_MUX_OUTPUT_PIN);
 }
 
 static void systick_setup(void) {
@@ -47,13 +49,17 @@ int main(void) {
   systick_setup();
   gpio_setup();
   keyboard_init();
-  usb_midi_init();
+  if (!usb_midi_init()) {
+    while (1) {
+      usb_midi_poll();
+    }
+  }
 
   while (1) {
     if ((system_millis - last_scan_ms) >= 1u) {
       last_scan_ms = system_millis;
 
-      const uint32_t changed = keyboard_scan_changed();
+      const uint32_t changed = keyboard_scan_changed(system_millis);
       const uint32_t state = keyboard_state();
 
       for (uint8_t key = 0; key < KEYBOARD_KEY_COUNT; key++) {

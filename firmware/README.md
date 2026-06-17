@@ -4,13 +4,18 @@
 
 ## Host-тесты
 
-Host-тесты проверяют чистый USB-MIDI packet builder и не требуют ARM GCC или железа.
+Host-тесты проверяют чистый USB-MIDI packet builder и не требуют ARM GCC или железа. Текущий test покрывает Note On/Off и clamp MIDI data bytes в 0–127.
 
 ```sh
 cd firmware
 cmake -S . -B build-test
 cmake --build build-test --target midi_packets_test
 ctest --test-dir build-test --output-on-failure
+clang -fsyntax-only -Wall -Wextra \
+  -Iinclude \
+  -I../libopencm3/include \
+  -DSTM32F1 -DSTM32F103C8 \
+  src/main.c src/keyboard.c src/midi_packet.c src/usb_midi.c
 ```
 
 ## Firmware build
@@ -61,7 +66,7 @@ st-flash write build-stm32/stm32-midi.elf 0x08000000
    - строки через 74HC238: `PB0`, `PB1`, `PB11`;
    - столбцы через 74HC151: `PA1`, `PA2`, `PB12`;
    - вход чтения: `PB13`.
-3. Дребезг обрабатывается программно, 3 стабильных скана.
+3. Дребезг обрабатывается программно: `keyboard_scan_changed(now_ms)` принимает SysTick millisecond timestamp и требует 3 ms стабильного состояния.
 4. При изменении состояния клавиши отправляет USB-MIDI:
    - `Note On`, channel 1, velocity 100;
    - `Note Off`, channel 1, velocity 0.

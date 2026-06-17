@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-void usb_midi_init(void);
+bool usb_midi_init(void);
 bool usb_midi_connected(void);
 void usb_midi_poll(void);
 bool usb_midi_note_on(uint8_t note, uint8_t velocity);

@@ -4,6 +4,11 @@
 #define MIDI_CIN_NOTE_OFF 0x8u
 #define MIDI_CIN_NOTE_ON 0x9u
 #define MIDI_CHANNEL_1 0x0u
+#define MIDI_DATA_MAX 0x7Fu
+
+static uint8_t clamp_midi_data(uint8_t value) {
+  return value > MIDI_DATA_MAX ? MIDI_DATA_MAX : value;
+}
 
 static midi_packet_t make_event(uint8_t cin, uint8_t status, uint8_t note,
                                 uint8_t velocity) {
@@ -11,8 +16,8 @@ static midi_packet_t make_event(uint8_t cin, uint8_t status, uint8_t note,
 
   packet.bytes[0] = (uint8_t)((MIDI_CABLE_NUMBER << 4) | cin);
   packet.bytes[1] = (uint8_t)(status | MIDI_CHANNEL_1);
-  packet.bytes[2] = note;
-  packet.bytes[3] = velocity;
+  packet.bytes[2] = clamp_midi_data(note);
+  packet.bytes[3] = clamp_midi_data(velocity);
 
   return packet;
 }

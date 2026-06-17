@@ -1,4 +1,5 @@
 #include "usb_midi.h"
+#include "hardware_config.h"
 #include "midi_packet.h"
 
 #include <libopencm3/usb/audio.h>
@@ -11,8 +12,6 @@
 #define USB_MIDI_PRODUCT_ID 0x0001u
 #define USB_MIDI_BCD_DEVICE 0x0100u
 #define USB_MIDI_MAX_PACKET_SIZE_0 64u
-#define USB_MIDI_EP_SIZE 64u
-#define USB_MIDI_EP_IN 0x81u
 #define USB_MIDI_CONTROL_BUFFER_SIZE 64u
 #define USB_MIDI_QUEUE_LEN 32u
 
@@ -114,9 +113,9 @@ static const struct __attribute__((packed)) {
 static const struct usb_endpoint_descriptor midi_endpoint = {
     .bLength = USB_DT_ENDPOINT_SIZE,
     .bDescriptorType = USB_DT_ENDPOINT,
-    .bEndpointAddress = USB_MIDI_EP_IN,
+    .bEndpointAddress = STM32_MIDI_USB_MIDI_EP_IN,
     .bmAttributes = USB_ENDPOINT_ATTR_BULK,
-    .wMaxPacketSize = USB_MIDI_EP_SIZE,
+    .wMaxPacketSize = STM32_MIDI_USB_MIDI_EP_SIZE,
     .bInterval = 1,
     .extra = &midi_endpoint_extra,
     .extralen = sizeof(midi_endpoint_extra),
@@ -199,10 +198,14 @@ static void reset_queue(void) {
 }
 
 static void set_config(usbd_device *usbd_dev, uint16_t wValue) {
-  (void)wValue;
+  if (wValue == 0) {
+    configured = false;
+    reset_queue();
+    return;
+  }
 
-  usbd_ep_setup(usbd_dev, USB_MIDI_EP_IN, USB_ENDPOINT_ATTR_BULK,
-                USB_MIDI_EP_SIZE, NULL);
+  usbd_ep_setup(usbd_dev, STM32_MIDI_USB_MIDI_EP_IN, USB_ENDPOINT_ATTR_BULK,
+                STM32_MIDI_USB_MIDI_EP_SIZE, NULL);
   configured = true;
   reset_queue();
 }
@@ -227,7 +230,7 @@ static void flush_queue(void) {
   while (queue_count > 0) {
     const midi_packet_t event = queue[queue_head];
     const uint16_t written = usbd_ep_write_packet(
-        usb_dev, USB_MIDI_EP_IN, event.bytes, sizeof(event.bytes));
+        usb_dev, STM32_MIDI_USB_MIDI_EP_IN, event.bytes, sizeof(event.bytes));
 
     if (written != sizeof(event.bytes)) {
       break;
@@ -238,7 +241,7 @@ static void flush_queue(void) {
   }
 }
 
-void usb_midi_init(void) {
+bool usb_midi_init(void) {
   reset_queue();
   configured = false;
 
@@ -246,7 +249,12 @@ void usb_midi_init(void) {
                       sizeof(usb_strings) / sizeof(usb_strings[0]),
                       usbd_control_buffer, sizeof(usbd_control_buffer));
 
+  if (usb_dev == NULL) {
+    return false;
+  }
+
   usbd_register_set_config_callback(usb_dev, set_config);
+  return true;
 }
 
 bool usb_midi_connected(void) { return configured; }
