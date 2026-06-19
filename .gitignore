@@ -4,12 +4,51 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 compile_commands.json
+# Примеры специфичные для проекта files
+*.o
+*.out
 *.elf
 *.bin
 *.hex
 *.map
-*.o
-*.d
-*.list
+*.so
+*.a
+
+# Temp folder
+build/
+
+# IntelliJ
+.idea
+*.iml
+
+# VSCode
+.vscode
+*.code-workspace
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Other
+.DS_Store
+Thumbs.db
+
+# Log
+*.log
+
+# PDF files - moved to docs subdirectory
+*.pdf
+
+# Test/build artifacts
+build*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Generated linker scripts
 generated.*.ld
+
+# Build directory
 build/
