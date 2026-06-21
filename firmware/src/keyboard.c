@@ -11,6 +11,7 @@
 
 #define ROW_SELECT_COUNT STM32_MIDI_ROW_SELECT_COUNT
 #define ROW_SELECT_PIN_MASK STM32_MIDI_ROW_SELECT_PIN_MASK
+#define COL_SELECT_COUNT STM32_MIDI_MUX_SELECT_COUNT
 #define MUX_PA_PIN_MASK STM32_MIDI_MUX_SELECT_PA_PIN_MASK
 #define MUX_PB_PIN_MASK STM32_MIDI_MUX_SELECT_PB_PIN
 #define MUX_OUTPUT_PIN STM32_MIDI_MUX_OUTPUT_PIN
@@ -26,7 +27,7 @@ struct gpio_pin {
   uint16_t pin;
 };
 
-static const struct gpio_pin col_pins[COL_COUNT] = {
+static const struct gpio_pin col_pins[COL_SELECT_COUNT] = {
     {GPIOA, GPIO1},  /* PA1 = S0 */
     {GPIOA, GPIO2},  /* PA2 = S1 */
     {GPIOB, GPIO12}, /* PB12 = S2 */
@@ -37,7 +38,8 @@ static uint32_t last_scan_ms;
 static uint8_t debounce[KEY_COUNT];
 
 static void settle_mux_inputs(void) {
-  /* Tune this delay after measuring the real 74HC151/74HC238 board. */
+  /* 74HC151/74HC238 tpd_max ≈ 23 ns @ 3.3V; 16 NOPs @ 72 MHz ≈ 222 ns (≥2× margin).
+     Adjust after measuring on real hardware. */
   for (volatile uint32_t i = 0; i < 16; i++) {
     __asm__("nop");
   }
@@ -57,7 +59,7 @@ static void select_col(uint8_t col) {
   gpio_clear(GPIOA, MUX_PA_PIN_MASK);
   gpio_clear(GPIOB, MUX_PB_PIN_MASK);
 
-  for (uint8_t bit = 0; bit < COL_COUNT; bit++) {
+  for (uint8_t bit = 0; bit < COL_SELECT_COUNT; bit++) {
     if ((col & (1u << bit)) != 0) {
       gpio_set(col_pins[bit].port, col_pins[bit].pin);
     }

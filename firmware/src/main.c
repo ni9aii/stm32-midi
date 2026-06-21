@@ -51,15 +51,17 @@ int main(void) {
   keyboard_init();
   if (!usb_midi_init()) {
     while (1) {
-      usb_midi_poll();
+      /* USB init failed — halt. */
     }
   }
 
   while (1) {
-    if ((system_millis - last_scan_ms) >= 1u) {
-      last_scan_ms = system_millis;
+    const uint32_t now = system_millis;
 
-      const uint32_t changed = keyboard_scan_changed(system_millis);
+    if ((now - last_scan_ms) >= 1u) {
+      last_scan_ms = now;
+
+      const uint32_t changed = keyboard_scan_changed(now);
       const uint32_t state = keyboard_state();
 
       for (uint8_t key = 0; key < KEYBOARD_KEY_COUNT; key++) {

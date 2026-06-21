@@ -210,6 +210,11 @@ static void set_config(usbd_device *usbd_dev, uint16_t wValue) {
   reset_queue();
 }
 
+static void on_reset(void) {
+  configured = false;
+  reset_queue();
+}
+
 static bool queue_event(const midi_packet_t *event) {
   if (!configured || (queue_count >= USB_MIDI_QUEUE_LEN)) {
     return false;
@@ -254,6 +259,7 @@ bool usb_midi_init(void) {
   }
 
   usbd_register_set_config_callback(usb_dev, set_config);
+  usbd_register_reset_callback(usb_dev, on_reset);
   return true;
 }
 

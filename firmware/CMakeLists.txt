@@ -125,6 +125,6 @@ if(CMAKE_CROSSCOMPILING)
                      VERBATIM)
 
   add_custom_target(flash
-                    COMMAND st-flash write "$<TARGET_FILE:stm32-midi>" 0x08000000
+                    COMMAND st-flash write "$<TARGET_FILE_DIR:stm32-midi>/stm32-midi.bin" 0x08000000
                     DEPENDS stm32-midi)
 endif()

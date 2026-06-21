@@ -7,6 +7,7 @@
 #define KEYBOARD_ROWS 5u
 #define KEYBOARD_COLS 5u
 #define KEYBOARD_KEY_COUNT (KEYBOARD_ROWS * KEYBOARD_COLS)
+_Static_assert(KEYBOARD_KEY_COUNT <= 32, "KEYBOARD_KEY_COUNT exceeds uint32_t bitmask width");
 #define KEYBOARD_SCAN_PERIOD_MS 1u
 #define KEYBOARD_DEBOUNCE_MS 3u
 
