@@ -179,10 +179,12 @@ static const struct usb_config_descriptor configs[] = {
     config_desc,
 };
 
+static char uid_serial[25]; /* 24 hex chars + null, filled by init_uid_serial() */
+
 static const char *const usb_strings[] = {
     "ni9aii",
     "STM32 MIDI Keyboard",
-    "STM32-MIDI-001",
+    uid_serial,
 };
 
 static uint8_t usbd_control_buffer[USB_MIDI_CONTROL_BUFFER_SIZE];
@@ -192,6 +194,30 @@ static midi_packet_t queue[USB_MIDI_QUEUE_LEN];
 static uint8_t queue_head;
 static uint8_t queue_tail;
 static uint8_t queue_count;
+
+static void uint32_to_hex(uint32_t val, char *out) {
+  static const char hex[] = "0123456789ABCDEF";
+  for (int8_t i = 7; i >= 0; i--) {
+    out[i] = hex[val & 0xFu];
+    val >>= 4;
+  }
+}
+
+static void init_uid_serial(void) {
+#ifdef STM32F1
+  const volatile uint32_t *uid = (const volatile uint32_t *)0x1FFFF7E8U;
+  uint32_to_hex(uid[0], uid_serial + 0);
+  uint32_to_hex(uid[1], uid_serial + 8);
+  uint32_to_hex(uid[2], uid_serial + 16);
+#else
+  /* Fallback for non-STM32 builds (should never be enumerated as USB). */
+  const char *fallback = "HOSTBUILDFALLBACK000000";
+  for (uint8_t i = 0; i < 24u; i++) {
+    uid_serial[i] = fallback[i];
+  }
+#endif
+  uid_serial[24] = '\0';
+}
 
 static void reset_queue(void) {
   queue_head = 0;
@@ -249,6 +275,7 @@ static void flush_queue(void) {
 }
 
 bool usb_midi_init(void) {
+  init_uid_serial();
   reset_queue();
   configured = false;
 
