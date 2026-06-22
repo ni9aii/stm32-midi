@@ -25,3 +25,43 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build-test --output-on-failure
+
+  firmware-build:
+    name: Firmware build (STM32)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install arm-none-eabi-gcc
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
+
+      - name: Configure
+        run: |
+          cmake -S firmware -B build-stm32 \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/stm32f103c8-toolchain.cmake \
+            -DSTM32_MIDI_BUILD_HOST_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build-stm32
+
+      - name: Size report
+        run: arm-none-eabi-size build-stm32/stm32-midi.elf
+
+      - name: Check firmware fits in 64 KB flash
+        run: |
+          TEXT=$(arm-none-eabi-size build-stm32/stm32-midi.elf \
+                   | awk 'NR==2 {print $1}')
+          RODATA=$(arm-none-eabi-size build-stm32/stm32-midi.elf \
+                   | awk 'NR==2 {print $2}')
+          FLASH=$((TEXT + RODATA))
+          LIMIT=$((60 * 1024))
+          echo "Flash used: ${FLASH} bytes / limit ${LIMIT} bytes"
+          if [ "$FLASH" -gt "$LIMIT" ]; then
+            echo "ERROR: firmware exceeds 60 KB flash budget"
+            exit 1
+          fi
