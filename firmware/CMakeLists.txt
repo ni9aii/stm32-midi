@@ -19,6 +19,9 @@ set(FIRMWARE_SOURCES
 set(MIDI_PACKET_SOURCES
     src/midi_packet.c)
 
+set(KEYBOARD_SOURCES
+    src/keyboard.c)
+
 enable_testing()
 
 if(NOT CMAKE_CROSSCOMPILING AND STM32_MIDI_BUILD_HOST_TESTS)
@@ -31,6 +34,17 @@ if(NOT CMAKE_CROSSCOMPILING AND STM32_MIDI_BUILD_HOST_TESTS)
   target_compile_options(midi_packets_test PRIVATE -Wall -Wextra -Werror)
 
   add_test(NAME midi_packets_test COMMAND midi_packets_test)
+
+  add_executable(keyboard_debounce_test
+                 tests/test_keyboard_debounce.c
+                 ${KEYBOARD_SOURCES})
+
+  target_include_directories(keyboard_debounce_test PRIVATE include)
+  target_compile_features(keyboard_debounce_test PRIVATE c_std_11)
+  target_compile_options(keyboard_debounce_test PRIVATE -Wall -Wextra -Werror
+                         -DKEYBOARD_HOST_TEST)
+
+  add_test(NAME keyboard_debounce_test COMMAND keyboard_debounce_test)
 endif()
 
 if(CMAKE_CROSSCOMPILING)

@@ -1,13 +1,16 @@
 #include "keyboard.h"
 
+#ifndef KEYBOARD_HOST_TEST
 #include "hardware_config.h"
-
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/gpio.h>
+#endif
 
 #define ROW_COUNT KEYBOARD_ROWS
 #define COL_COUNT KEYBOARD_COLS
 #define KEY_COUNT KEYBOARD_KEY_COUNT
+
+#ifndef KEYBOARD_HOST_TEST
 
 #define ROW_SELECT_COUNT STM32_MIDI_ROW_SELECT_COUNT
 #define ROW_SELECT_PIN_MASK STM32_MIDI_ROW_SELECT_PIN_MASK
@@ -32,10 +35,6 @@ static const struct gpio_pin col_pins[COL_SELECT_COUNT] = {
     {GPIOA, GPIO2},  /* PA2 = S1 */
     {GPIOB, GPIO12}, /* PB12 = S2 */
 };
-
-static uint32_t stable_state;
-static uint32_t last_scan_ms;
-static uint8_t debounce[KEY_COUNT];
 
 static void settle_mux_inputs(void) {
   /* 74HC151/74HC238 tpd_max ≈ 23 ns @ 3.3V; 16 NOPs @ 72 MHz ≈ 222 ns (≥2× margin).
@@ -97,13 +96,30 @@ static uint32_t scan_matrix_raw(void) {
   return raw;
 }
 
+#endif /* KEYBOARD_HOST_TEST */
+
+static uint32_t stable_state;
+static uint32_t last_scan_ms;
+static uint8_t debounce[KEY_COUNT];
+static keyboard_scan_fn active_scanner;
+
 void keyboard_init(void) {
   stable_state = 0;
   last_scan_ms = 0;
+#ifndef KEYBOARD_HOST_TEST
+  active_scanner = scan_matrix_raw;
+#else
+  active_scanner = (void *)0;
+#endif
 
   for (uint8_t i = 0; i < KEY_COUNT; i++) {
     debounce[i] = 0;
   }
+}
+
+void keyboard_init_with_scanner(keyboard_scan_fn fn) {
+  keyboard_init();
+  active_scanner = fn;
 }
 
 uint32_t keyboard_scan_changed(uint32_t now_ms) {
@@ -113,7 +129,7 @@ uint32_t keyboard_scan_changed(uint32_t now_ms) {
 
   last_scan_ms = now_ms;
 
-  const uint32_t raw = scan_matrix_raw();
+  const uint32_t raw = active_scanner();
   uint32_t next_state = stable_state;
 
   for (uint8_t key = 0; key < KEY_COUNT; key++) {
