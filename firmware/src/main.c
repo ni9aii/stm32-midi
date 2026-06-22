@@ -42,7 +42,7 @@ static void systick_setup(void) {
   systick_counter_enable();
 }
 
-int main(void) {
+__attribute__((noreturn)) int main(void) {
   uint32_t last_scan_ms = 0;
 
   clock_setup();
@@ -72,6 +72,9 @@ int main(void) {
         }
 
         const uint8_t note = keyboard_note_for_key(key);
+        if (note == 0xFFu) {
+          continue;
+        }
 
         if ((state & bit) != 0) {
           usb_midi_note_on(note, MIDI_VELOCITY);

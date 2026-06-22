@@ -14,6 +14,8 @@
 #define USB_MIDI_MAX_PACKET_SIZE_0 64u
 #define USB_MIDI_CONTROL_BUFFER_SIZE 64u
 #define USB_MIDI_QUEUE_LEN 32u
+_Static_assert((USB_MIDI_QUEUE_LEN & (USB_MIDI_QUEUE_LEN - 1u)) == 0u,
+               "USB_MIDI_QUEUE_LEN must be a power of 2 for bitmask wrap-around");
 
 static const struct usb_device_descriptor dev_desc = {
     .bLength = USB_DT_DEVICE_SIZE,

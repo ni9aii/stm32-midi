@@ -46,6 +46,10 @@ static void settle_mux_inputs(void) {
 }
 
 static void select_row(uint8_t row) {
+  if (row >= ROW_COUNT) {
+    return;
+  }
+
   gpio_clear(GPIOB, ROW_SELECT_PIN_MASK);
 
   for (uint8_t bit = 0; bit < ROW_SELECT_COUNT; bit++) {
@@ -56,6 +60,10 @@ static void select_row(uint8_t row) {
 }
 
 static void select_col(uint8_t col) {
+  if (col >= COL_COUNT) {
+    return;
+  }
+
   gpio_clear(GPIOA, MUX_PA_PIN_MASK);
   gpio_clear(GPIOB, MUX_PB_PIN_MASK);
 
@@ -139,7 +147,7 @@ uint32_t keyboard_state(void) { return stable_state; }
 
 uint8_t keyboard_note_for_key(uint8_t key) {
   if (key >= KEY_COUNT) {
-    return 0;
+    return 0xFFu;
   }
 
   return 36u + key;

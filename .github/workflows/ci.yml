@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  host-tests:
+    name: Host tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S firmware -B build-test -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: cmake --build build-test
+
+      - name: Test
+        run: ctest --test-dir build-test --output-on-failure

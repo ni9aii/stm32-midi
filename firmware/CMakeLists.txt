@@ -28,7 +28,7 @@ if(NOT CMAKE_CROSSCOMPILING AND STM32_MIDI_BUILD_HOST_TESTS)
 
   target_include_directories(midi_packets_test PRIVATE include)
   target_compile_features(midi_packets_test PRIVATE c_std_11)
-  target_compile_options(midi_packets_test PRIVATE -Wall -Wextra)
+  target_compile_options(midi_packets_test PRIVATE -Wall -Wextra -Werror)
 
   add_test(NAME midi_packets_test COMMAND midi_packets_test)
 endif()
@@ -58,9 +58,14 @@ if(CMAKE_CROSSCOMPILING)
   target_compile_definitions(stm32-midi PRIVATE STM32F1 STM32F103C8)
   target_compile_options(stm32-midi
                          PRIVATE
+                         -mcpu=cortex-m3
+                         -mthumb
+                         -msoft-float
+                         -ffreestanding
                          -Os
                          -Wall
                          -Wextra
+                         -Werror
                          -ffunction-sections
                          -fdata-sections)
 
@@ -113,6 +118,9 @@ if(CMAKE_CROSSCOMPILING)
   target_link_libraries(stm32-midi PRIVATE "${OPENCM3_STM32F1_LIBRARY}")
   target_link_options(stm32-midi
                       PRIVATE
+                      -mcpu=cortex-m3
+                      -mthumb
+                      -msoft-float
                       -T "${GENERATED_LINKER_SCRIPT}"
                       -Wl,--gc-sections)
 
