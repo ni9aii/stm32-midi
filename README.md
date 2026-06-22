@@ -72,7 +72,7 @@ cmake --build build-stm32 --target flash
 Или вручную:
 
 ```sh
-st-flash write build-stm32/stm32-midi.elf 0x08000000
+st-flash write build-stm32/stm32-midi.bin 0x08000000
 ```
 
 ## Ограничения текущей версии

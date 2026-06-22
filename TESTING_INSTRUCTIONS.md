@@ -163,7 +163,7 @@ echo "✅ Прошивка STM32 MIDI успешно завершена чере
 
 ```bash
 cd firmware
-st-flash write build-stm32/stm32-midi.elf 0x08000000
+st-flash write build-stm32/stm32-midi.bin 0x08000000
 ```
 
 **Советы по установке для систем на базе Arch Linux (без AUR):**
@@ -291,7 +291,7 @@ if command -v openocd >/dev/null && command -v st-link >/dev/null; then
   read -p "Выбор (1/2): " choice
   case $choice in
     1) openocd -f interface/st-link.cfg -f target/stm32f1x.cfg -c "program build-stm32/stm32-midi.elf verify reset run" -c "shutdown" ;;
-    2) st-flash write build-stm32/stm32-midi.elf 0x08000000 ;;
+    2) st-flash write build-stm32/stm32-midi.bin 0x08000000 ;;
     *) echo "Отменено" ;;
   esac
 elif command -v openocd >/dev/null; then
@@ -299,7 +299,7 @@ elif command -v openocd >/dev/null; then
   openocd -f interface/st-link.cfg -f target/stm32f1x.cfg -c "program build-stm32/stm32-midi.elf verify reset run" -c "shutdown"
 elif command -v st-link >/dev/null; then
   echo "Используется st-flash..."
-  st-flash write build-stm32/stm32-midi.elf 0x08000000
+  st-flash write build-stm32/stm32-midi.bin 0x08000000
 else
   echo "Ни st-link (st-flash) ни OpenOCD не установлены"
   echo "Выполните: sudo pacman -S openocd (рекомендуется)"
@@ -392,7 +392,7 @@ if command -v openocd >/dev/null; then
 else
   echo "⚠️  OpenOCD недоступен, использование st-flash..."
   if command -v st-flash >/dev/null; then
-    st-flash write build-stm32/stm32-midi.elf 0x08000000
+    st-flash write build-stm32/stm32-midi.bin 0x08000000
     echo "✅ st-flash завершен"
   else
     echo "❌ Ни OpenOCD, ни st-link не установлены"
