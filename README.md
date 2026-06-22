@@ -1,87 +1,86 @@
 # stm32-midi
 
-Минимальная прошивка USB-MIDI клавиатуры для схемы STM32F103C8T6 из репозитория.
+[![CI](https://github.com/ni9aii/stm32-midi/actions/workflows/ci.yml/badge.svg)](https://github.com/ni9aii/stm32-midi/actions/workflows/ci.yml)
+
+Прошивка USB-MIDI клавиатуры для STM32F103C8T6. Матрица 5×5, USB Audio/MIDI class, отправляет `Note On`/`Note Off` для 25 клавиш.
 
 ## Что внутри
 
-|\`- `docs/Schematic.pdf` — электрическая принципиальная схема.
-|- `docs/BOM.pdf` — перечень элементов/BOM.
-|- `firmware/` — прошивка на **libopencm3** для STM32F103C8T6.
-|- `docs/hardware.md` — расшифровка схемы, BOM и назначений GPIO.
+```
+firmware/          прошивка (libopencm3, CMake)
+docs/hardware.md   схема, BOM, карта GPIO
+docs/Schematic.pdf принципиальная схема
+docs/BOM.pdf       перечень элементов
+```
 
 ## Аппаратная часть
 
 Плата построена вокруг STM32F103C8T6:
 
-- USB-C подключен к встроенному USB FS: `PA11`/`PA12` через 22 Ом.
-- Тактирование: внешний кварц 8 MHz, PLL до 72 MHz.
-- SWD: `PA14/SWCLK`, `PA13/SWDIO`, `NRST`.
+- USB-C: встроенный USB FS, `PA11`/`PA12` через 22 Ом
+- Тактирование: внешний кварц 8 MHz, PLL до 72 MHz
+- SWD: `PA14/SWCLK`, `PA13/SWDIO`, `NRST`
 - Матрица клавиш 5×5 с диодами:
-  - строки выбираются через 74HC238 (`PB0`, `PB1`, `PB11`);
-  - столбцы читаются через 74HC151 (`PA1`, `PA2`, `PB12`);
-  - сигнал выбранного столбца читается с `PB13`;
-  - активный уровень нажатия — логический `0`.
-- LED `VD26` — индикатор питания, подключен напрямую через R6.
+  - строки — 74HC238 (`PB0`, `PB1`, `PB11`)
+  - столбцы — 74HC151 (`PA1`, `PA2`, `PB12`)
+  - выход мультиплексора — `PB13`, активный уровень нажатия `0`
+- LED `VD26` — индикатор питания
 
 ## Быстрый старт
+
+### Host-тесты (без железа)
 
 ```sh
 cd firmware
 git submodule update --init --recursive
 cmake -S . -B build-test
-cmake --build build-test --target midi_packets_test
+cmake --build build-test
 ctest --test-dir build-test --output-on-failure
 ```
 
-Для firmware build нужен `arm-none-eabi-gcc`:
+Два теста: MIDI packet builder и логика дебаунса клавиатуры.
+
+### Сборка прошивки (требует `arm-none-eabi-gcc`)
 
 ```sh
 cmake -S . -B build-stm32 \
-  -DCMAKE_TOOLCHAIN_FILE=cmake/stm32f103c8-toolchain.cmake
-cmake --build build-stm32 --target stm32-midi
+  -DCMAKE_TOOLCHAIN_FILE=cmake/stm32f103c8-toolchain.cmake \
+  -DSTM32_MIDI_BUILD_HOST_TESTS=OFF
+cmake --build build-stm32
 ```
-
-Прошивка отправляет USB-MIDI `Note On`/`Note Off` для 25 клавиш. Канал MIDI — 1, velocity при нажатии — 100, при отпускании — 0. Ноты идут подряд от MIDI note 36.
-
-## Проверка без железа
-
-Текущий повторяемый gate в этой среде:
-
-```sh
-cd firmware
-cmake -S . -B build-test
-cmake --build build-test --target midi_packets_test
-ctest --test-dir build-test --output-on-failure
-clang -fsyntax-only -Wall -Wextra \
-  -Iinclude \
-  -I../libopencm3/include \
-  -DSTM32F1 -DSTM32F103C8 \
-  src/main.c src/keyboard.c src/midi_packet.c src/usb_midi.c
-```
-
-Host-тест проверяет USB-MIDI packet builder и clamp MIDI data bytes в 0–127. `clang -fsyntax-only` проверяет firmware sources against libopencm3 headers without linking ARM firmware.
 
 ## Прошивка на плату
 
-Если установлен `st-flash`:
+Через CMake-цель:
 
 ```sh
 cmake --build build-stm32 --target flash
 ```
 
-Или вручную:
+Или вручную через `st-flash`:
 
 ```sh
 st-flash write build-stm32/stm32-midi.bin 0x08000000
 ```
 
-## Ограничения текущей версии
+Через OpenOCD (рекомендуется, подробнее в `TESTING_INSTRUCTIONS.md`):
 
-Это минимальная рабочая версия:
+```sh
+openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+  -c "program build-stm32/stm32-midi.elf verify reset exit"
+```
 
-- нет конфигурации нот/velocity;
-- нет обработки USB-MIDI входящих сообщений;
-- нет энергосбережения;
-- нет аппаратной отладки на реальном устройстве в этой среде.
+## Что делает прошивка
 
-См. `docs/hardware.md` для подробной карты пинов и BOM.
+- Сканирует матрицу 5×5 каждые 1 мс
+- Дебаунс 3 мс программный
+- USB серийный номер генерируется из уникального 96-bit ID устройства
+- USB MIDI `Note On` (velocity 100) / `Note Off` (velocity 0) для нот 36–60
+- TX-only: входящие MIDI-сообщения не обрабатываются
+
+## Известные ограничения до финального релиза
+
+- USB PID `0x0001` — тестовый. Ждёт регистрации на [pid.codes](https://pid.codes)
+- Прошивка не тестировалась на реальном железе
+
+См. `docs/hardware-test-checklist.md` для протокола проверки на устройстве.
