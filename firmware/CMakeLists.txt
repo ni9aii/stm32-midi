@@ -135,6 +135,7 @@ if(CMAKE_CROSSCOMPILING)
                       -mcpu=cortex-m3
                       -mthumb
                       -msoft-float
+                      -nostartfiles
                       -T "${GENERATED_LINKER_SCRIPT}"
                       -Wl,--gc-sections)
 
